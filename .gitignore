@@ -1,0 +1,2 @@
+# Ignore runtime uploaded files
+static/uploads/*
