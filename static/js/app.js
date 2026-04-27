@@ -96,15 +96,30 @@ function setupModeHint() {
   const modeInputs = document.querySelectorAll("input[name='mode']");
   if (!modeHint || !modeInputs.length) return;
 
-  const messages = {
+  const defaultMessages = {
     grayscale: "Mode grayscale cocok untuk menonjolkan struktur dan tekstur citra tanpa dipengaruhi warna.",
     binary: "Mode binary cocok untuk segmentasi sederhana dengan pemisahan objek dan latar belakang secara tegas.",
+    canny: "Canny memanfaatkan dua ambang untuk mendeteksi tepi kuat dan tepi lemah secara lebih stabil.",
+    sobel: "Sobel menghitung gradien horizontal dan vertikal untuk menonjolkan perubahan intensitas citra.",
+    roberts: "Roberts memakai kernel 2x2 sehingga respons tepi diagonal terlihat lebih tajam.",
+    robets: "Roberts memakai kernel 2x2 sehingga respons tepi diagonal terlihat lebih tajam.",
+    prewitt: "Prewitt menggunakan operator gradien sederhana untuk menampilkan kontur objek dengan cepat.",
   };
 
   const updateHint = () => {
     const selected = document.querySelector("input[name='mode']:checked");
-    const key = selected ? selected.value : "grayscale";
-    modeHint.textContent = messages[key] || messages.grayscale;
+    if (!selected) {
+      modeHint.textContent = "Pilih metode pemrosesan untuk melihat penjelasan singkat.";
+      return;
+    }
+
+    const inputHint = selected.dataset.hint;
+    if (inputHint) {
+      modeHint.textContent = inputHint;
+      return;
+    }
+
+    modeHint.textContent = defaultMessages[selected.value] || defaultMessages.grayscale;
   };
 
   modeInputs.forEach((input) => input.addEventListener("change", updateHint));

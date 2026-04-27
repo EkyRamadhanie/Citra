@@ -37,7 +37,7 @@
           <div class="col-lg-4">
             <div class="hero-stats">
               <div class="stats-item">
-                <div class="stats-value">01</div>
+                <div class="stats-value">02</div>
                 <div class="stats-label">Tugas tersedia</div>
               </div>
               <div class="stats-item">
@@ -69,13 +69,19 @@
             </article>
           </div>
 
-          <!--
-            Tambahkan card tugas baru di bawah bagian ini.
-            Pola yang disarankan:
-            1. Duplikasi blok <div class="col-12 col-md-6 col-xl-4">...</div>
-            2. Ubah task-pill, task-title, task-description, dan task-meta
-            3. Arahkan link tombol ke route tugas yang sesuai, misalnya url_for('tugas2')
-          -->
+          <div class="col-12 col-md-6 col-xl-4">
+            <article class="task-card" data-stagger>
+              <span class="task-pill">Tugas 2</span>
+              <h3 class="task-title">Deteksi Tepi Canny, Sobel, Roberts, Prewitt</h3>
+              <p class="task-description">
+                Upload gambar lalu pilih metode edge detection untuk mengekstrak kontur objek
+                menggunakan Canny, Sobel, Roberts, atau Prewitt.
+              </p>
+              <div class="task-meta">OpenCV | Edge Detection | Tugas Praktikum</div>
+              <a href="{{ url_for('tugas2') }}" class="btn btn-citra w-100 mt-4">Buka Tugas 2</a>
+            </article>
+          </div>
+
         </div>
       </section>
     </main>

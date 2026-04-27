@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tugas 1 - Konversi Grayscale & Biner</title>
+    <title>Tugas 2 - Deteksi Tepi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -27,8 +27,8 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <span class="hero-chip">Tugas Praktikum</span>
-            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 1: Grayscale &amp; Binary</h1>
-            <p class="mb-0 text-body-secondary">Unggah gambar lalu pilih mode pengolahan yang diinginkan.</p>
+            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 2: Deteksi Tepi</h1>
+            <p class="mb-0 text-body-secondary">Unggah gambar lalu pilih operator Canny, Sobel, Roberts, atau Prewitt.</p>
           </div>
           <a href="{{ url_for('index') }}" class="btn btn-ghost">Kembali ke Homepage</a>
         </div>
@@ -74,35 +74,63 @@
               </div>
 
               <div class="col-lg-5">
-                <label class="form-label fw-semibold">Pilih metode pengolahan</label>
+                <label class="form-label fw-semibold">Pilih metode deteksi tepi</label>
 
                 <div class="mode-grid">
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeGrayscale"
-                    value="grayscale"
-                    data-hint="Mode grayscale cocok untuk menonjolkan struktur dan tekstur citra tanpa dipengaruhi warna."
-                    {% if selected_mode != 'binary' %}checked{% endif %}
+                    id="modeCanny"
+                    value="canny"
+                    data-hint="Canny memanfaatkan dua ambang untuk mendeteksi tepi kuat dan tepi lemah secara lebih stabil."
+                    {% if selected_mode != 'sobel' and selected_mode != 'roberts' and selected_mode != 'robets' and selected_mode != 'prewitt' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeGrayscale">
-                    <span class="mode-title">Ubah ke Grayscale</span>
-                    <span class="mode-desc">Warna diubah jadi intensitas abu-abu.</span>
+                  <label class="mode-option" for="modeCanny">
+                    <span class="mode-title">Canny</span>
+                    <span class="mode-desc">Deteksi tepi multi-tahap dengan hasil kontur relatif bersih.</span>
                   </label>
 
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeBinary"
-                    value="binary"
-                    data-hint="Mode binary cocok untuk segmentasi sederhana dengan pemisahan objek dan latar belakang secara tegas."
-                    {% if selected_mode == 'binary' %}checked{% endif %}
+                    id="modeSobel"
+                    value="sobel"
+                    data-hint="Sobel menghitung gradien horizontal dan vertikal untuk menonjolkan perubahan intensitas citra."
+                    {% if selected_mode == 'sobel' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeBinary">
-                    <span class="mode-title">Ubah ke Binary</span>
-                    <span class="mode-desc">Grayscale + threshold hitam/putih.</span>
+                  <label class="mode-option" for="modeSobel">
+                    <span class="mode-title">Sobel</span>
+                    <span class="mode-desc">Operator gradien yang menonjolkan perubahan intensitas arah X dan Y.</span>
+                  </label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="mode"
+                    id="modeRoberts"
+                    value="roberts"
+                    data-hint="Roberts memakai kernel 2x2 sehingga respons tepi diagonal terlihat lebih tajam."
+                    {% if selected_mode == 'roberts' or selected_mode == 'robets' %}checked{% endif %}
+                  >
+                  <label class="mode-option" for="modeRoberts">
+                    <span class="mode-title">Roberts</span>
+                    <span class="mode-desc">Kernel kecil 2x2 yang cepat untuk mendeteksi tepi diagonal.</span>
+                  </label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="mode"
+                    id="modePrewitt"
+                    value="prewitt"
+                    data-hint="Prewitt menggunakan operator gradien sederhana untuk menampilkan kontur objek dengan cepat."
+                    {% if selected_mode == 'prewitt' %}checked{% endif %}
+                  >
+                  <label class="mode-option" for="modePrewitt">
+                    <span class="mode-title">Prewitt</span>
+                    <span class="mode-desc">Alternatif Sobel dengan kernel gradien sederhana untuk kontur objek.</span>
                   </label>
                 </div>
 
@@ -136,15 +164,19 @@
               <div class="card-body">
                 <h2 class="h5 mb-3">
                   Gambar Hasil
-                  {% if selected_mode == 'grayscale' %}
-                    (Grayscale)
+                  {% if selected_mode == 'canny' %}
+                    (Canny)
+                  {% elif selected_mode == 'sobel' %}
+                    (Sobel)
+                  {% elif selected_mode == 'prewitt' %}
+                    (Prewitt)
                   {% else %}
-                    (Binary)
+                    (Roberts)
                   {% endif %}
                 </h2>
                 <img
                   src="{{ url_for('static', filename=processed_image) }}"
-                  alt="Gambar hasil pengolahan"
+                  alt="Gambar hasil deteksi tepi"
                   class="result-image"
                 >
               </div>
