@@ -173,6 +173,8 @@ body.theme-citra {
 }
 
 .task-card {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(22, 52, 66, 0.12);
@@ -219,6 +221,10 @@ body.theme-citra {
   color: #166d75;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.task-card .btn-citra {
+  margin-top: auto !important;
 }
 
 .btn-citra {
