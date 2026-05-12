@@ -104,6 +104,8 @@ function setupModeHint() {
     roberts: "Roberts memakai kernel 2x2 sehingga respons tepi diagonal terlihat lebih tajam.",
     robets: "Roberts memakai kernel 2x2 sehingga respons tepi diagonal terlihat lebih tajam.",
     prewitt: "Prewitt menggunakan operator gradien sederhana untuk menampilkan kontur objek dengan cepat.",
+    dilation: "Dilasi menambah area putih pada citra biner sehingga objek tampak lebih tebal dan lebih menyatu.",
+    erosion: "Erosi mengurangi area putih pada citra biner sehingga detail kecil berkurang dan objek tampak lebih ramping.",
   };
 
   const updateHint = () => {

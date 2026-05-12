@@ -20,6 +20,10 @@ EDGE_MODE_SUFFIX = {
     "robets": "roberts",
     "prewitt": "prewitt",
 }
+MORPH_MODE_SUFFIX = {
+    "dilation": "dilation",
+    "erosion": "erosion",
+}
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
@@ -101,6 +105,34 @@ def process_edge_detection(input_path: str, output_path: str, mode: str) -> None
     success = cv2.imwrite(output_path, result)
     if not success:
         raise ValueError("Failed to save processed image.")
+
+
+def process_morphology(input_path: str, output_paths: dict[str, str], mode: str) -> None:
+    image = cv2.imread(input_path)
+    if image is None:
+        raise ValueError("Uploaded file is not a valid image.")
+
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(grayscale, 127, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+
+    if mode == "dilation":
+        result = cv2.dilate(binary, kernel, iterations=1)
+    elif mode == "erosion":
+        result = cv2.erode(binary, kernel, iterations=1)
+    else:
+        raise ValueError("Unsupported morphology mode.")
+
+    step_images = {
+        "grayscale": grayscale,
+        "binary": binary,
+        "processed": result,
+    }
+
+    for key, step_image in step_images.items():
+        success = cv2.imwrite(output_paths[key], step_image)
+        if not success:
+            raise ValueError("Failed to save processed image.")
 
 
 @app.route("/")
@@ -224,10 +256,89 @@ def tugas2():
     )
 
 
+@app.route("/tugas3", methods=["GET", "POST"])
+def tugas3():
+    original_image = None
+    grayscale_image = None
+    binary_image = None
+    processed_image = None
+    selected_mode = "dilation"
+
+    if request.method == "POST":
+        uploaded_file = request.files.get("image")
+        selected_mode = request.form.get("mode", "dilation").lower()
+
+        if uploaded_file is None or uploaded_file.filename == "":
+            flash("Silakan pilih file gambar terlebih dahulu.", "danger")
+            return redirect(url_for("tugas3"))
+
+        if not allowed_file(uploaded_file.filename):
+            flash("Format file tidak didukung. Gunakan PNG, JPG, JPEG, BMP, atau WEBP.", "danger")
+            return redirect(url_for("tugas3"))
+
+        safe_name = secure_filename(uploaded_file.filename)
+        base_name, ext = os.path.splitext(safe_name)
+        unique_token = uuid.uuid4().hex[:8]
+
+        original_filename = f"{base_name}_{unique_token}{ext.lower()}"
+        original_path = os.path.join(app.config["UPLOAD_FOLDER"], original_filename)
+        uploaded_file.save(original_path)
+
+        output_suffix = MORPH_MODE_SUFFIX.get(selected_mode)
+        if output_suffix is None:
+            cleanup_files(original_path)
+            flash("Metode morfologi tidak didukung.", "danger")
+            return redirect(url_for("tugas3"))
+
+        grayscale_filename = f"{base_name}_{unique_token}_gray.png"
+        binary_filename = f"{base_name}_{unique_token}_binary.png"
+        processed_filename = f"{base_name}_{unique_token}_{output_suffix}.png"
+
+        grayscale_path = os.path.join(app.config["UPLOAD_FOLDER"], grayscale_filename)
+        binary_path = os.path.join(app.config["UPLOAD_FOLDER"], binary_filename)
+        processed_path = os.path.join(app.config["UPLOAD_FOLDER"], processed_filename)
+
+        try:
+            process_morphology(
+                original_path,
+                {
+                    "grayscale": grayscale_path,
+                    "binary": binary_path,
+                    "processed": processed_path,
+                },
+                selected_mode,
+            )
+        except ValueError:
+            cleanup_files(original_path, grayscale_path, binary_path, processed_path)
+            flash("File tidak valid atau gagal diproses.", "danger")
+            return redirect(url_for("tugas3"))
+        except Exception:
+            cleanup_files(original_path, grayscale_path, binary_path, processed_path)
+            flash("Terjadi kesalahan saat memproses gambar.", "danger")
+            return redirect(url_for("tugas3"))
+
+        original_image = f"uploads/{original_filename}"
+        grayscale_image = f"uploads/{grayscale_filename}"
+        binary_image = f"uploads/{binary_filename}"
+        processed_image = f"uploads/{processed_filename}"
+        flash("Gambar berhasil diproses bertahap.", "success")
+
+    return render_template(
+        "tugas3.html",
+        original_image=original_image,
+        grayscale_image=grayscale_image,
+        binary_image=binary_image,
+        processed_image=processed_image,
+        selected_mode=selected_mode,
+    )
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_error):
     flash("Ukuran file terlalu besar. Maksimal 10 MB.", "danger")
 
+    if request.path.startswith("/tugas3"):
+        return redirect(url_for("tugas3"))
     if request.path.startswith("/tugas2"):
         return redirect(url_for("tugas2"))
     if request.path.startswith("/tugas1"):
