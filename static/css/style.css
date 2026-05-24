@@ -216,6 +216,26 @@ body.theme-citra {
   line-height: 1.55;
 }
 
+@media (min-width: 768px) {
+  .task-title {
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    height: calc(1.2em * 2);
+  }
+
+  .task-description {
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+    height: calc(1.55em * 5);
+  }
+}
+
 .task-meta {
   margin-top: 1rem;
   color: #166d75;

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tugas 3 - Morfologi Citra</title>
+    <title>Tugas 4 - Morfologi 2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -27,15 +27,16 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <span class="hero-chip">Tugas Praktikum</span>
-            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 3: Morfologi Citra</h1>
+            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 4: Morfologi 2</h1>
             <p class="mb-0 text-body-secondary">
-              Unggah gambar lalu pilih dilasi atau erosi. Hasil diproses bertahap dari RGB -> Grayscale -> Binary -> Morfologi akhir.
+              Pilih satu dari tiga metode lanjutan yang paling ringkas: boundary, convex hull, atau
+              skeletonizing. Semua hasil diproses bertahap dari RGB -> Grayscale -> Binary -> Hasil akhir.
             </p>
             <div class="d-flex flex-wrap gap-2 mt-3">
               <span class="section-tag">RGB</span>
               <span class="section-tag">Grayscale</span>
               <span class="section-tag">Binary</span>
-              <span class="section-tag">Dilasi / Erosi</span>
+              <span class="section-tag">Boundary / Convex Hull / Skeletonizing</span>
             </div>
           </div>
           <a href="{{ url_for('index') }}" class="btn btn-ghost">Kembali ke Homepage</a>
@@ -82,35 +83,49 @@
               </div>
 
               <div class="col-lg-5">
-                <label class="form-label fw-semibold">Pilih metode morfologi</label>
+                <label class="form-label fw-semibold">Pilih metode morfologi 2</label>
 
                 <div class="mode-grid">
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeDilation"
-                    value="dilation"
-                    data-hint="Dilasi memperbesar area putih pada citra biner sehingga objek tampak lebih tebal dan lebih menyatu."
-                    {% if selected_mode != 'erosion' %}checked{% endif %}
+                    id="modeBoundary"
+                    value="boundary"
+                    data-hint="Boundary mengekstrak garis luar objek dari citra biner dengan mengurangkan hasil erosi."
+                    {% if selected_mode == 'boundary' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeDilation">
-                    <span class="mode-title">Dilasi</span>
-                    <span class="mode-desc">Memperbesar area putih pada citra biner.</span>
+                  <label class="mode-option" for="modeBoundary">
+                    <span class="mode-title">Boundary</span>
+                    <span class="mode-desc">Mengambil batas luar objek pada citra biner.</span>
                   </label>
 
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeErosion"
-                    value="erosion"
-                    data-hint="Erosi mengurangi area putih pada citra biner sehingga detail kecil berkurang dan objek tampak lebih ramping."
-                    {% if selected_mode == 'erosion' %}checked{% endif %}
+                    id="modeConvexHull"
+                    value="convex_hull"
+                    data-hint="Convex hull membentuk selubung terluar yang membungkus objek secara ringkas dan rapi."
+                    {% if selected_mode == 'convex_hull' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeErosion">
-                    <span class="mode-title">Erosi</span>
-                    <span class="mode-desc">Mengurangi area putih dan menipiskan objek.</span>
+                  <label class="mode-option" for="modeConvexHull">
+                    <span class="mode-title">Convex Hull</span>
+                    <span class="mode-desc">Membentuk selubung terluar yang menutup objek.</span>
+                  </label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="mode"
+                    id="modeSkeletonizing"
+                    value="skeletonizing"
+                    data-hint="Skeletonizing menyusutkan objek menjadi garis inti tipis tanpa menghilangkan struktur utamanya."
+                    {% if selected_mode == 'skeletonizing' %}checked{% endif %}
+                  >
+                  <label class="mode-option" for="modeSkeletonizing">
+                    <span class="mode-title">Skeletonizing</span>
+                    <span class="mode-desc">Menyusutkan objek menjadi garis inti tipis.</span>
                   </label>
                 </div>
 
@@ -134,7 +149,7 @@
               <span class="section-tag">2. Grayscale</span>
               <span class="section-tag">3. Binary</span>
               <span class="section-tag">
-                4. {% if selected_mode == 'dilation' %}Dilasi{% else %}Erosi{% endif %}
+                4. {% if selected_mode == 'boundary' %}Boundary{% elif selected_mode == 'convex_hull' %}Convex Hull{% else %}Skeletonizing{% endif %}
               </span>
             </div>
           </div>
@@ -184,15 +199,17 @@
                 <div class="card-body">
                   <h2 class="h5 mb-3">
                     4. Hasil Akhir
-                    {% if selected_mode == 'dilation' %}
-                      (Dilasi)
+                    {% if selected_mode == 'boundary' %}
+                      (Boundary)
+                    {% elif selected_mode == 'convex_hull' %}
+                      (Convex Hull)
                     {% else %}
-                      (Erosi)
+                      (Skeletonizing)
                     {% endif %}
                   </h2>
                   <img
                     src="{{ url_for('static', filename=processed_image) }}"
-                    alt="Hasil morfologi"
+                    alt="Hasil morfologi 2"
                     class="result-image"
                   >
                 </div>

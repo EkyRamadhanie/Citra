@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tugas 3 - Morfologi Citra</title>
+    <title>Tugas 5 - Segmentasi Citra</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -27,15 +27,15 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <span class="hero-chip">Tugas Praktikum</span>
-            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 3: Morfologi Citra</h1>
+            <h1 class="heading-display heading-sm mt-3 mb-2">Tugas 5: Segmentasi Citra</h1>
             <p class="mb-0 text-body-secondary">
-              Unggah gambar lalu pilih dilasi atau erosi. Hasil diproses bertahap dari RGB -> Grayscale -> Binary -> Morfologi akhir.
+              Unggah gambar lalu pilih segmentasi berbasis HSV untuk menonjolkan warna dominan atau
+              KMeans untuk mengelompokkan piksel ke beberapa klaster warna.
             </p>
             <div class="d-flex flex-wrap gap-2 mt-3">
-              <span class="section-tag">RGB</span>
-              <span class="section-tag">Grayscale</span>
-              <span class="section-tag">Binary</span>
-              <span class="section-tag">Dilasi / Erosi</span>
+              <span class="section-tag">HSV</span>
+              <span class="section-tag">KMeans</span>
+              <span class="section-tag">Segmentasi Warna</span>
             </div>
           </div>
           <a href="{{ url_for('index') }}" class="btn btn-ghost">Kembali ke Homepage</a>
@@ -82,39 +82,59 @@
               </div>
 
               <div class="col-lg-5">
-                <label class="form-label fw-semibold">Pilih metode morfologi</label>
+                <label class="form-label fw-semibold">Pilih metode segmentasi</label>
 
                 <div class="mode-grid">
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeDilation"
-                    value="dilation"
-                    data-hint="Dilasi memperbesar area putih pada citra biner sehingga objek tampak lebih tebal dan lebih menyatu."
-                    {% if selected_mode != 'erosion' %}checked{% endif %}
+                    id="modeHsv"
+                    value="hsv"
+                    data-hint="HSV mengekstrak area berdasarkan hue, saturation, dan value sehingga warna dominan pada citra lebih mudah dipisahkan."
+                    {% if selected_mode != 'kmeans' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeDilation">
-                    <span class="mode-title">Dilasi</span>
-                    <span class="mode-desc">Memperbesar area putih pada citra biner.</span>
+                  <label class="mode-option" for="modeHsv">
+                    <span class="mode-title">HSV</span>
+                    <span class="mode-desc">Memisahkan area berdasarkan ruang warna HSV.</span>
                   </label>
 
                   <input
                     type="radio"
                     class="btn-check"
                     name="mode"
-                    id="modeErosion"
-                    value="erosion"
-                    data-hint="Erosi mengurangi area putih pada citra biner sehingga detail kecil berkurang dan objek tampak lebih ramping."
-                    {% if selected_mode == 'erosion' %}checked{% endif %}
+                    id="modeKMeans"
+                    value="kmeans"
+                    data-hint="KMeans mengelompokkan piksel yang mirip ke dalam beberapa klaster warna yang bisa diatur dengan slider jumlah cluster."
+                    {% if selected_mode == 'kmeans' %}checked{% endif %}
                   >
-                  <label class="mode-option" for="modeErosion">
-                    <span class="mode-title">Erosi</span>
-                    <span class="mode-desc">Mengurangi area putih dan menipiskan objek.</span>
+                  <label class="mode-option" for="modeKMeans">
+                    <span class="mode-title">KMeans</span>
+                    <span class="mode-desc">Mengelompokkan piksel ke beberapa klaster warna.</span>
                   </label>
                 </div>
 
                 <div id="modeHint" class="mode-hint mt-3"></div>
+
+                <div id="kmeansSettings" class="mt-3" {% if selected_mode != 'kmeans' %}hidden{% endif %}>
+                  <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                    <label for="clusterCount" class="form-label fw-semibold mb-0">Jumlah cluster KMeans</label>
+                    <span id="clusterCountValue" class="section-tag">{{ cluster_count }}</span>
+                  </div>
+                  <input
+                    type="range"
+                    class="form-range"
+                    id="clusterCount"
+                    name="cluster_count"
+                    min="2"
+                    max="8"
+                    step="1"
+                    value="{{ cluster_count }}"
+                  >
+                  <div class="small text-muted">
+                    Gunakan 2 sampai 8 cluster. Nilai lebih besar membuat hasil segmentasi lebih detail.
+                  </div>
+                </div>
 
                 <button type="submit" id="processBtn" class="btn btn-citra w-100 mt-3">
                   <span class="btn-label">Proses Gambar</span>
@@ -125,22 +145,20 @@
         </div>
       </section>
 
-      {% if original_image and grayscale_image and binary_image and processed_image %}
+      {% if original_image and processed_image %}
         <section class="mb-4" data-stagger>
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-            <h2 class="section-title mb-0">Hasil per langkah</h2>
+            <h2 class="section-title mb-0">Hasil Segmentasi</h2>
             <div class="d-flex flex-wrap gap-2">
               <span class="section-tag">1. RGB</span>
-              <span class="section-tag">2. Grayscale</span>
-              <span class="section-tag">3. Binary</span>
               <span class="section-tag">
-                4. {% if selected_mode == 'dilation' %}Dilasi{% else %}Erosi{% endif %}
+                2. {% if selected_mode == 'hsv' %}HSV{% else %}KMeans {{ cluster_count }} Cluster{% endif %}
               </span>
             </div>
           </div>
 
           <div class="row g-4">
-            <div class="col-12 col-md-6 col-xl-3">
+            <div class="col-12 col-md-6">
               <div class="card result-card border-0 h-100">
                 <div class="card-body">
                   <h2 class="h5 mb-3">1. RGB / Gambar Asli</h2>
@@ -153,46 +171,20 @@
               </div>
             </div>
 
-            <div class="col-12 col-md-6 col-xl-3">
-              <div class="card result-card border-0 h-100">
-                <div class="card-body">
-                  <h2 class="h5 mb-3">2. Grayscale</h2>
-                  <img
-                    src="{{ url_for('static', filename=grayscale_image) }}"
-                    alt="Hasil grayscale"
-                    class="result-image"
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6 col-xl-3">
-              <div class="card result-card border-0 h-100">
-                <div class="card-body">
-                  <h2 class="h5 mb-3">3. Binary</h2>
-                  <img
-                    src="{{ url_for('static', filename=binary_image) }}"
-                    alt="Hasil binary"
-                    class="result-image"
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6 col-xl-3">
+            <div class="col-12 col-md-6">
               <div class="card result-card border-0 h-100">
                 <div class="card-body">
                   <h2 class="h5 mb-3">
-                    4. Hasil Akhir
-                    {% if selected_mode == 'dilation' %}
-                      (Dilasi)
+                    2. Hasil Akhir
+                    {% if selected_mode == 'hsv' %}
+                      (HSV)
                     {% else %}
-                      (Erosi)
+                      (KMeans, {{ cluster_count }} Cluster)
                     {% endif %}
                   </h2>
                   <img
                     src="{{ url_for('static', filename=processed_image) }}"
-                    alt="Hasil morfologi"
+                    alt="Hasil segmentasi"
                     class="result-image"
                   >
                 </div>

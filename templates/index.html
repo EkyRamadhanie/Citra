@@ -37,7 +37,7 @@
           <div class="col-lg-4">
             <div class="hero-stats">
               <div class="stats-item">
-                <div class="stats-value">03</div>
+                <div class="stats-value">05</div>
                 <div class="stats-label">Tugas tersedia</div>
               </div>
               <div class="stats-item">
@@ -55,9 +55,9 @@
           <span class="section-tag">Pilih salah satu tugas</span>
         </div>
 
-        <div class="row g-4">
-          <div class="col-12 col-md-6 col-xl-4">
-            <article class="task-card" data-stagger>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 row-cols-xxl-5 g-4">
+          <div class="col">
+            <article class="task-card h-100" data-stagger>
               <span class="task-pill">Tugas 1</span>
               <h3 class="task-title">Konversi Grayscale &amp; Binary</h3>
               <p class="task-description">
@@ -69,8 +69,8 @@
             </article>
           </div>
 
-          <div class="col-12 col-md-6 col-xl-4">
-            <article class="task-card" data-stagger>
+          <div class="col">
+            <article class="task-card h-100" data-stagger>
               <span class="task-pill">Tugas 2</span>
               <h3 class="task-title">Deteksi Tepi Canny, Sobel, Roberts, Prewitt</h3>
               <p class="task-description">
@@ -82,8 +82,8 @@
             </article>
           </div>
 
-          <div class="col-12 col-md-6 col-xl-4">
-            <article class="task-card" data-stagger>
+          <div class="col">
+            <article class="task-card h-100" data-stagger>
               <span class="task-pill">Tugas 3</span>
               <h3 class="task-title">Morfologi Citra: Dilasi &amp; Erosi</h3>
               <p class="task-description">
@@ -95,13 +95,37 @@
             </article>
           </div>
 
+          <div class="col">
+            <article class="task-card h-100" data-stagger>
+              <span class="task-pill">Tugas 4</span>
+              <h3 class="task-title">Morfologi 2: Boundary, Convex Hull, Skeletonizing</h3>
+              <p class="task-description">
+                Upload gambar lalu pilih salah satu dari 3 metode morfologi lanjutan yang paling ringkas
+                untuk ditampilkan pada citra biner.
+              </p>
+              <div class="task-meta">OpenCV | Morfologi 2 | Tugas Praktikum</div>
+              <a href="{{ url_for('tugas4') }}" class="btn btn-citra w-100 mt-4">Buka Tugas 4</a>
+            </article>
+          </div>
+
+          <div class="col">
+            <article class="task-card h-100" data-stagger>
+              <span class="task-pill">Tugas 5</span>
+              <h3 class="task-title">Segmentasi Citra: HSV &amp; KMeans</h3>
+              <p class="task-description">
+                Upload gambar lalu pilih segmentasi berbasis HSV untuk menonjolkan warna dominan atau
+                KMeans untuk mengelompokkan piksel ke beberapa klaster warna.
+              </p>
+              <div class="task-meta">OpenCV | Segmentasi | Tugas Praktikum</div>
+              <a href="{{ url_for('tugas5') }}" class="btn btn-citra w-100 mt-4">Buka Tugas 5</a>
+            </article>
+          </div>
         </div>
       </section>
     </main>
 
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>

@@ -2,6 +2,7 @@ import os
 import uuid
 
 import cv2
+import numpy as np
 from flask import Flask, flash, redirect, render_template, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
@@ -23,6 +24,15 @@ EDGE_MODE_SUFFIX = {
 MORPH_MODE_SUFFIX = {
     "dilation": "dilation",
     "erosion": "erosion",
+}
+MORPH2_MODE_SUFFIX = {
+    "boundary": "boundary",
+    "convex_hull": "convex_hull",
+    "skeletonizing": "skeletonizing",
+}
+SEGMENTATION_MODE_SUFFIX = {
+    "hsv": "hsv_segmented",
+    "kmeans": "kmeans_segmented",
 }
 
 app = Flask(__name__)
@@ -133,6 +143,118 @@ def process_morphology(input_path: str, output_paths: dict[str, str], mode: str)
         success = cv2.imwrite(output_paths[key], step_image)
         if not success:
             raise ValueError("Failed to save processed image.")
+
+
+def skeletonize_binary(binary: np.ndarray) -> np.ndarray:
+    skeleton = np.zeros(binary.shape, np.uint8)
+    working_image = binary.copy()
+    structuring_element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+
+    while True:
+        eroded = cv2.erode(working_image, structuring_element)
+        opened = cv2.dilate(eroded, structuring_element)
+        residual = cv2.subtract(working_image, opened)
+        skeleton = cv2.bitwise_or(skeleton, residual)
+        working_image = eroded.copy()
+
+        if cv2.countNonZero(working_image) == 0:
+            break
+
+    return skeleton
+
+
+def process_morphology_2(input_path: str, output_paths: dict[str, str], mode: str) -> None:
+    image = cv2.imread(input_path)
+    if image is None:
+        raise ValueError("Uploaded file is not a valid image.")
+
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(grayscale, 127, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+
+    if mode == "boundary":
+        eroded = cv2.erode(binary, kernel, iterations=1)
+        result = cv2.subtract(binary, eroded)
+    elif mode == "convex_hull":
+        result = np.zeros_like(binary)
+        contours, _hierarchy = cv2.findContours(binary.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours:
+            if cv2.contourArea(contour) <= 0:
+                continue
+            hull = cv2.convexHull(contour)
+            cv2.drawContours(result, [hull], -1, 255, thickness=cv2.FILLED)
+    elif mode == "skeletonizing":
+        result = skeletonize_binary(binary)
+    else:
+        raise ValueError("Unsupported morphology mode.")
+
+    step_images = {
+        "grayscale": grayscale,
+        "binary": binary,
+        "processed": result,
+    }
+
+    for key, step_image in step_images.items():
+        success = cv2.imwrite(output_paths[key], step_image)
+        if not success:
+            raise ValueError("Failed to save processed image.")
+
+
+def process_segmentation(input_path: str, output_path: str, mode: str, cluster_count: int = 3) -> None:
+    image = cv2.imread(input_path)
+    if image is None:
+        raise ValueError("Uploaded file is not a valid image.")
+
+    smoothed = cv2.GaussianBlur(image, (5, 5), 0)
+
+    if mode == "hsv":
+        hsv = cv2.cvtColor(smoothed, cv2.COLOR_BGR2HSV)
+        hue = hsv[:, :, 0]
+        saturation = hsv[:, :, 1]
+        value = hsv[:, :, 2]
+
+        saliency_mask = (saturation > 40) & (value > 40)
+        if np.any(saliency_mask):
+            hue_values = hue[saliency_mask]
+            dominant_hue = int(np.bincount(hue_values, minlength=180).argmax())
+            hue_margin = 15
+            lower_bound = np.array([max(0, dominant_hue - hue_margin), 40, 40], dtype=np.uint8)
+            upper_bound = np.array([min(179, dominant_hue + hue_margin), 255, 255], dtype=np.uint8)
+            mask = cv2.inRange(hsv, lower_bound, upper_bound)
+        else:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        result = cv2.bitwise_and(image, image, mask=mask)
+    elif mode == "kmeans":
+        pixels = smoothed.reshape((-1, 3)).astype(np.float32)
+        cluster_count = max(2, min(8, int(cluster_count)))
+        if pixels.shape[0] < cluster_count:
+            raise ValueError("Uploaded image is too small for clustering.")
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+        _compactness, labels, centers = cv2.kmeans(
+            pixels,
+            cluster_count,
+            None,
+            criteria,
+            10,
+            cv2.KMEANS_PP_CENTERS,
+        )
+
+        centers = centers.astype(np.uint8)
+        segmented = centers[labels.flatten()].reshape(image.shape)
+        result = segmented
+    else:
+        raise ValueError("Unsupported segmentation mode.")
+
+    success = cv2.imwrite(output_path, result)
+    if not success:
+        raise ValueError("Failed to save processed image.")
 
 
 @app.route("/")
@@ -333,10 +455,157 @@ def tugas3():
     )
 
 
+@app.route("/tugas4", methods=["GET", "POST"])
+def tugas4():
+    original_image = None
+    grayscale_image = None
+    binary_image = None
+    processed_image = None
+    selected_mode = "boundary"
+
+    if request.method == "POST":
+        uploaded_file = request.files.get("image")
+        selected_mode = request.form.get("mode", "boundary").lower()
+
+        if uploaded_file is None or uploaded_file.filename == "":
+            flash("Silakan pilih file gambar terlebih dahulu.", "danger")
+            return redirect(url_for("tugas4"))
+
+        if not allowed_file(uploaded_file.filename):
+            flash("Format file tidak didukung. Gunakan PNG, JPG, JPEG, BMP, atau WEBP.", "danger")
+            return redirect(url_for("tugas4"))
+
+        safe_name = secure_filename(uploaded_file.filename)
+        base_name, ext = os.path.splitext(safe_name)
+        unique_token = uuid.uuid4().hex[:8]
+
+        original_filename = f"{base_name}_{unique_token}{ext.lower()}"
+        original_path = os.path.join(app.config["UPLOAD_FOLDER"], original_filename)
+        uploaded_file.save(original_path)
+
+        output_suffix = MORPH2_MODE_SUFFIX.get(selected_mode)
+        if output_suffix is None:
+            cleanup_files(original_path)
+            flash("Metode morfologi 2 tidak didukung.", "danger")
+            return redirect(url_for("tugas4"))
+
+        grayscale_filename = f"{base_name}_{unique_token}_gray.png"
+        binary_filename = f"{base_name}_{unique_token}_binary.png"
+        processed_filename = f"{base_name}_{unique_token}_{output_suffix}.png"
+
+        grayscale_path = os.path.join(app.config["UPLOAD_FOLDER"], grayscale_filename)
+        binary_path = os.path.join(app.config["UPLOAD_FOLDER"], binary_filename)
+        processed_path = os.path.join(app.config["UPLOAD_FOLDER"], processed_filename)
+
+        try:
+            process_morphology_2(
+                original_path,
+                {
+                    "grayscale": grayscale_path,
+                    "binary": binary_path,
+                    "processed": processed_path,
+                },
+                selected_mode,
+            )
+        except ValueError:
+            cleanup_files(original_path, grayscale_path, binary_path, processed_path)
+            flash("File tidak valid atau gagal diproses.", "danger")
+            return redirect(url_for("tugas4"))
+        except Exception:
+            cleanup_files(original_path, grayscale_path, binary_path, processed_path)
+            flash("Terjadi kesalahan saat memproses gambar.", "danger")
+            return redirect(url_for("tugas4"))
+
+        original_image = f"uploads/{original_filename}"
+        grayscale_image = f"uploads/{grayscale_filename}"
+        binary_image = f"uploads/{binary_filename}"
+        processed_image = f"uploads/{processed_filename}"
+        flash("Gambar berhasil diproses bertahap.", "success")
+
+    return render_template(
+        "tugas4.html",
+        original_image=original_image,
+        grayscale_image=grayscale_image,
+        binary_image=binary_image,
+        processed_image=processed_image,
+        selected_mode=selected_mode,
+    )
+
+
+@app.route("/tugas5", methods=["GET", "POST"])
+def tugas5():
+    original_image = None
+    processed_image = None
+    selected_mode = "hsv"
+    cluster_count = 3
+
+    if request.method == "POST":
+        uploaded_file = request.files.get("image")
+        selected_mode = request.form.get("mode", "hsv").lower()
+        if selected_mode == "kmeans":
+            try:
+                cluster_count = int(request.form.get("cluster_count", "3"))
+            except (TypeError, ValueError):
+                cluster_count = 3
+            cluster_count = max(2, min(8, cluster_count))
+
+        if uploaded_file is None or uploaded_file.filename == "":
+            flash("Silakan pilih file gambar terlebih dahulu.", "danger")
+            return redirect(url_for("tugas5"))
+
+        if not allowed_file(uploaded_file.filename):
+            flash("Format file tidak didukung. Gunakan PNG, JPG, JPEG, BMP, atau WEBP.", "danger")
+            return redirect(url_for("tugas5"))
+
+        safe_name = secure_filename(uploaded_file.filename)
+        base_name, ext = os.path.splitext(safe_name)
+        unique_token = uuid.uuid4().hex[:8]
+
+        original_filename = f"{base_name}_{unique_token}{ext.lower()}"
+        original_path = os.path.join(app.config["UPLOAD_FOLDER"], original_filename)
+        uploaded_file.save(original_path)
+
+        output_suffix = SEGMENTATION_MODE_SUFFIX.get(selected_mode)
+        if output_suffix is None:
+            cleanup_files(original_path)
+            flash("Metode segmentasi tidak didukung.", "danger")
+            return redirect(url_for("tugas5"))
+
+        processed_filename = f"{base_name}_{unique_token}_{output_suffix}.png"
+        processed_path = os.path.join(app.config["UPLOAD_FOLDER"], processed_filename)
+
+        try:
+            process_segmentation(original_path, processed_path, selected_mode, cluster_count)
+        except ValueError:
+            cleanup_files(original_path, processed_path)
+            flash("File tidak valid atau gagal diproses.", "danger")
+            return redirect(url_for("tugas5"))
+        except Exception:
+            cleanup_files(original_path, processed_path)
+            flash("Terjadi kesalahan saat memproses gambar.", "danger")
+            return redirect(url_for("tugas5"))
+
+        original_image = f"uploads/{original_filename}"
+        processed_image = f"uploads/{processed_filename}"
+        flash("Gambar berhasil disegmentasi.", "success")
+
+    return render_template(
+        "tugas5.html",
+        original_image=original_image,
+        processed_image=processed_image,
+        selected_mode=selected_mode,
+        cluster_count=cluster_count,
+    )
+
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_error):
     flash("Ukuran file terlalu besar. Maksimal 10 MB.", "danger")
 
+    if request.path.startswith("/tugas5"):
+        return redirect(url_for("tugas5"))
+    if request.path.startswith("/tugas4"):
+        return redirect(url_for("tugas4"))
     if request.path.startswith("/tugas3"):
         return redirect(url_for("tugas3"))
     if request.path.startswith("/tugas2"):

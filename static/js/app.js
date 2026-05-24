@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupStaggerAnimation();
   setupUploadInteractions();
   setupModeHint();
+  setupKMeansControls();
   setupCompareSlider();
   setupSubmitLoading();
 });
@@ -106,6 +107,11 @@ function setupModeHint() {
     prewitt: "Prewitt menggunakan operator gradien sederhana untuk menampilkan kontur objek dengan cepat.",
     dilation: "Dilasi menambah area putih pada citra biner sehingga objek tampak lebih tebal dan lebih menyatu.",
     erosion: "Erosi mengurangi area putih pada citra biner sehingga detail kecil berkurang dan objek tampak lebih ramping.",
+    boundary: "Boundary mengekstrak garis luar objek dari citra biner dengan mengurangkan hasil erosi.",
+    convex_hull: "Convex hull membentuk selubung terluar yang membungkus objek secara ringkas dan rapi.",
+    skeletonizing: "Skeletonizing menyusutkan objek menjadi garis inti tipis tanpa menghilangkan struktur utamanya.",
+    hsv: "HSV memisahkan warna berdasarkan hue, saturation, dan value untuk menonjolkan area berwarna tertentu.",
+    kmeans: "KMeans mengelompokkan piksel ke beberapa klaster warna sehingga area serupa terkumpul dalam segmen yang sama.",
   };
 
   const updateHint = () => {
@@ -126,6 +132,32 @@ function setupModeHint() {
 
   modeInputs.forEach((input) => input.addEventListener("change", updateHint));
   updateHint();
+}
+
+function setupKMeansControls() {
+  const modeInputs = document.querySelectorAll("input[name='mode']");
+  const kmeansSettings = document.getElementById("kmeansSettings");
+  const kmeansSlider = document.getElementById("clusterCount");
+  const kmeansValue = document.getElementById("clusterCountValue");
+
+  if (!modeInputs.length || !kmeansSettings || !kmeansSlider || !kmeansValue) return;
+
+  const syncValue = () => {
+    kmeansValue.textContent = String(kmeansSlider.value);
+  };
+
+  const updateVisibility = () => {
+    const selected = document.querySelector("input[name='mode']:checked");
+    const isKMeans = Boolean(selected && selected.value === "kmeans");
+
+    kmeansSettings.hidden = !isKMeans;
+    kmeansSlider.disabled = !isKMeans;
+    syncValue();
+  };
+
+  kmeansSlider.addEventListener("input", syncValue);
+  modeInputs.forEach((input) => input.addEventListener("change", updateVisibility));
+  updateVisibility();
 }
 
 function setupCompareSlider() {
